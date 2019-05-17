@@ -1,0 +1,82 @@
+package com.springboot.btest.common.aspect;
+
+import com.alibaba.fastjson.JSONObject;
+import com.springboot.btest.common.annotation.Log;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
+
+/**
+ * 服务日志切面，主要记录接口日志及耗时
+ **/
+@Aspect
+@Component
+public class SvcLogAspect {
+
+    private Logger logger = LoggerFactory.getLogger(getClass());
+    ThreadLocal<Long> startTime =new ThreadLocal<Long>();
+    ThreadLocal<String> methodName =new ThreadLocal<String>();
+    ThreadLocal<Log.type> type =new ThreadLocal<Log.type>();
+    @Pointcut("@annotation(com.springboot.btest.common.annotation.Log)")
+    public void webLog(){}
+
+    @Before("webLog()")
+    public void doBefore(JoinPoint joinPoint) {
+        startTime.set(System.currentTimeMillis());
+        try {
+            type.set(getLogExcludeType(joinPoint));
+            logger.info("注解为：{}",type.get());
+        } catch (Exception e) {
+            logger.error("获取注解types异常",e);
+        }
+        if (!type.get().equals(Log.type.IN_PARAM)){
+            // 接收到请求，记录请求内容
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            HttpServletRequest request = attributes.getRequest();
+            // 记录下请求内容
+            String name = joinPoint.getSignature().getName();
+            methodName.set(name);
+            logger.info( name +"方法入参为："+ JSONObject.toJSONString(joinPoint.getArgs()));
+        }
+
+    }
+    @AfterReturning(returning = "ret", pointcut = "webLog()")
+    public void doAfterReturning(Object ret) {
+        String out = "方法出参: " + JSONObject.toJSONString(ret);
+        String consume = " 耗时:"+(System.currentTimeMillis()-startTime.get())+"ms";
+        // 处理完请求，返回内容
+        logger.info(methodName.get() + (type.get().equals(Log.type.OUT_PARAM)?"":out) +(type.get().equals(Log.type.ELAPSE)?"":consume));
+    }
+    private Log.type getLogExcludeType(JoinPoint joinPoint)
+            throws Exception {
+        String targetName = joinPoint.getTarget().getClass().getName();
+        String methodName = joinPoint.getSignature().getName();
+        Object[] arguments = joinPoint.getArgs();
+        Class targetClass = Class.forName(targetName);
+        Method[] methods = targetClass.getMethods();
+        Log.type exclude = Log.type.NULL;
+        for(Method method : methods) {
+            if(method.getName().equals(methodName)) {
+                Class[] clazzs = method.getParameterTypes();
+                if(clazzs.length == arguments.length) {
+                    Log.type temp = method.getAnnotation(Log.class).exclude();
+                    if (temp != null)
+                        exclude = temp;
+                    break;
+                }
+            }
+        }
+        return exclude;
+    }
+
+}

@@ -1,0 +1,64 @@
+spring:
+  http:
+    encoding:
+      force: true
+      charset: UTF-8
+      enabled: true
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+    username: root
+    password: 123456
+    # 连接池配置
+    initialSize: 10
+    minIdle: 10
+    maxActive: 100
+    # 连接等待超时时间
+    maxWait: 60000
+    # 扫描间隔时间(检测可以关闭的空闲连接)
+    timeBetweenEvictionRunsMillis: 60000
+    # 配置连接在池中的最小生存时间
+    minEvictableIdleTimeMillis: 300000
+    validationQuery: SELECT 1 FROM DUAL
+    testWhileIdle: true
+    testOnBorrow: false
+    testOnReturn: false
+    # 打开PSCache，并且指定每个连接上PSCache的大小
+    poolPreparedStatements: true
+    maxPoolPreparedStatementPerConnectionSize: 20
+#  redis:
+#    host: 111.230.111.111
+#    port: 28083
+#    database: 0
+#    password: 111&111
+#    jedis:
+#      pool:
+#        min-idle: 0
+#        max-idle: 8
+#        max-active: 8
+#        max-wait: -1ms
+
+server:
+  tomcat:
+    uri-encoding: UTF-8
+  servlet:
+    context-path: /mood-admin-api
+
+logging:
+  file: logs/mood-admin.log
+  level:
+     com.yeting.web: debug
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.springboot.btest.dao
+
+global:
+  uploadPath: E:/tmp/mood
+  swaggerShow: true
+  sys_seq_id: sys_seq_id
+
